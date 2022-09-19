@@ -14,6 +14,9 @@ var _newsTitle = 'Untitled';
 var _pageNr = 1;
 var _pageCount = 0;
 
+var exportStartDate = new Date();
+var exportEndDate = new Date();
+
 const wait = function(iMilliSeconds) {
     var counter= 0
         , start = new Date().getTime()
@@ -90,6 +93,15 @@ const savePdf = function(pdf) {
 
 const newsExportButtonClickHandler = function() {
 	console.log("newsExportButtonClickHandler");
+
+	exportStartDate = new Date(document.getElementById("exportDateFromInput").value);
+	exportStartDate.setHours(0,0,0,0);
+
+	exportEndDate = new Date(document.getElementById("exportDateToInput").value);
+	exportEndDate.setHours(0,0,0,0);
+
+	console.log("exporting news from " + exportStartDate + " until " + exportEndDate);
+
 	if (isFirstPage()) {
 		pdf = newPdf();
 		readPage(pdf);
@@ -121,19 +133,50 @@ const readPageDone = function(pdf) {
 	}
 }
 
+const newsArticleIsValid = function(pdf, newsArticle) {
+	if (newsArticle) {
+		articleDateString = newsArticle.getElementsByTagName("td").item(2).innerText.replaceAll('Verlopen\n','').replaceAll('\n', ' ').replaceAll(',','');
+		articleYear = articleDateString.split(' ')[3];
+		articleMonth = articleDateString.split(' ')[2]
+							.replaceAll('januari','01')
+							.replaceAll('februari','02')
+							.replaceAll('maart','03')
+							.replaceAll('april','04')
+							.replaceAll('mei','05')
+							.replaceAll('juni','06')
+							.replaceAll('juli','07')
+							.replaceAll('augustus','08')
+							.replaceAll('september','09')
+							.replaceAll('oktober','10')
+							.replaceAll('november','11')
+							.replaceAll('december','12');
+		articleDay = ('0' + articleDateString.split(' ')[1]).slice(-2);
+
+		articleDate = new Date(articleYear+'-'+articleMonth+'-'+articleDay);
+		articleDate.setHours(0,0,0,0);
+		if (articleDate >= exportStartDate && articleDate <= exportEndDate) {
+			return true;
+		}
+
+		// !newsArticle.getElementsByTagName("td").item(2).innerText.includes("Verlopen")
+		
+	}
+	return false;
+}
+
 const readCurrentArticleLine = function(pdf) {
 	console.log("readCurrentArticleLine: " + _currentArticle);
 	tables = document.getElementsByTagName("table");
 	lastTable = tables.item(tables.length-1);
 	newsArticles = lastTable.getElementsByTagName("tr");
 	newsArticle = newsArticles.item(_currentArticle);
-	if (newsArticle && !newsArticle.getElementsByTagName("td").item(2).innerText.includes("Verlopen")) {
-		_validArticles++;
-
-		// if (_validArticles > 1) {
-		// 	newPage(pdf);
-		// }
-		fillNewsPageWithLineContent(pdf);
+	if (newsArticle) {
+		if (newsArticleIsValid(pdf, newsArticle)) {
+			_validArticles++;
+			fillNewsPageWithLineContent(pdf);
+		} else {
+			continueAfterInvalidArticle(pdf);
+		}
 	} else {
 		setTimeout(function () {readPageDone(pdf);}, 1000);
 	}
@@ -244,6 +287,11 @@ const afterFillNewsPageWithNewsContent = function(pdf) {
 	setTimeout(function () {readCurrentArticleLine(pdf);}, 1000);
 }
 
+const continueAfterInvalidArticle = function(pdf) {
+	_currentArticle++;
+	setTimeout(function () {readCurrentArticleLine(pdf);}, 250);
+}
+
 const addNewsExportButton = function() {
 	let addNewsButtons = document.querySelectorAll("button[ng-click='openNewsItem()']");
 
@@ -271,23 +319,21 @@ const addNewsExportButton = function() {
 		exportColumn.appendChild(exportBtnGroup);
 
 
-		exportDateFromLabel = document.createElement("div");
-		exportDateFromLabel.setAttribute("id", "exportDateFromLabel");
-		exportDateFromLabel.innerText = "Datum vanaf:&nbsp;";
+		exportDateFromLabel = document.createElement("label");
+		exportDateFromLabel.setAttribute("for", "exportDateFromInput");
+		exportDateFromLabel.innerText = "Datum vanaf:";
 
 		exportDateFromInput = document.createElement("input");
 		exportDateFromInput.setAttribute("id", "exportDateFromInput");
 		exportDateFromInput.setAttribute("type", "date");
-		exportDateFromInput.setAttribute("class", "date");
 
-		exportDateToLabel = document.createElement("div");
-		exportDateToLabel.setAttribute("id", "exportDateToLabel");
-		exportDateToLabel.innerText = "Datum tot:&nbsp;";
+		exportDateToLabel = document.createElement("label");
+		exportDateToLabel.setAttribute("for", "exportDateToInput");
+		exportDateToLabel.innerText = "Datum tot en met:";
 
 		exportDateToInput = document.createElement("input");
 		exportDateToInput.setAttribute("id", "exportDateToInput");
 		exportDateToInput.setAttribute("type", "date");
-		exportDateToInput.setAttribute("class", "date");
 
 		newsExportButton = document.createElement("button");
 		newsExportButton.setAttribute("id", "newsExportButton");
@@ -295,10 +341,19 @@ const addNewsExportButton = function() {
 		newsExportButton.innerText = "Exporteer " + _newsTitle + " als pdf";
 		newsExportButton.addEventListener("click", newsExportButtonClickHandler);
 
-		//exportBtnGroup.appendChild(exportDateFromLabel);
-		//exportBtnGroup.appendChild(exportDateFromInput);
-		//exportBtnGroup.appendChild(exportDateToLabel);
-		//exportBtnGroup.appendChild(exportDateToInput);
+		exportBtnGroup.appendChild(exportDateFromLabel);
+		exportBtnGroup.appendChild(exportDateFromInput);
+		exportBtnGroup.appendChild(exportDateToLabel);
+		exportBtnGroup.appendChild(exportDateToInput);
 		exportBtnGroup.appendChild(newsExportButton);
+
+		today = new Date();
+		endDate = new Date();
+		endDate.setDate(today.getDate() - today.getDay());
+		startDate = new Date();
+		startDate.setDate(endDate.getDate() - 13);
+
+		document.getElementById("exportDateFromInput").value = startDate.toISOString().slice(0,10);
+		document.getElementById("exportDateToInput").value = endDate.toISOString().slice(0,10);
 	}
 }
