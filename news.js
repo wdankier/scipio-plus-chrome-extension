@@ -14,8 +14,8 @@ var _newsTitle = 'Untitled';
 var _pageNr = 1;
 var _pageCount = 0;
 
-var exportStartDate = new Date();
-var exportEndDate = new Date();
+var _exportStartDate = new Date();
+var _exportEndDate = new Date();
 
 const wait = function(iMilliSeconds) {
     var counter= 0
@@ -62,7 +62,6 @@ const newPdf = function() {
 
 	var { jsPDF } = window.jspdf;
 	var pdf = new jsPDF(jsPdfOptions);
-	//writePageFooter(pdf);
 	return pdf;
 }
 
@@ -71,7 +70,6 @@ const newPage = function(pdf) {
 	_pageNr++;
 	_pageCount++;
 	_pageY = _viewTop;
-	//writePageFooter(pdf);
 }
 
 const writePageFooter = function(pdf) {
@@ -94,16 +92,17 @@ const savePdf = function(pdf) {
 const newsExportButtonClickHandler = function() {
 	console.log("newsExportButtonClickHandler");
 
-	exportStartDate = new Date(document.getElementById("exportDateFromInput").value);
-	exportStartDate.setHours(0,0,0,0);
+	_exportStartDate = new Date(document.getElementById("exportDateFromInput").value);
+	_exportStartDate.setHours(0,0,0,0);
 
-	exportEndDate = new Date(document.getElementById("exportDateToInput").value);
-	exportEndDate.setHours(0,0,0,0);
+	_exportEndDate = new Date(document.getElementById("exportDateToInput").value);
+	_exportEndDate.setHours(0,0,0,0);
 
-	console.log("exporting news from " + exportStartDate + " until " + exportEndDate);
+	console.log("exporting news from " + _exportStartDate + " until " + _exportEndDate);
 
 	if (isFirstPage()) {
 		pdf = newPdf();
+		writeDocumentTitle(pdf);
 		readPage(pdf);
 	} else {
 		setTimeout(function () {newsExportButtonClickHandler();}, 1000);
@@ -154,7 +153,7 @@ const newsArticleIsValid = function(pdf, newsArticle) {
 
 		articleDate = new Date(articleYear+'-'+articleMonth+'-'+articleDay);
 		articleDate.setHours(0,0,0,0);
-		if (articleDate >= exportStartDate && articleDate <= exportEndDate) {
+		if (articleDate >= _exportStartDate && articleDate <= _exportEndDate) {
 			return true;
 		}
 
@@ -182,6 +181,14 @@ const readCurrentArticleLine = function(pdf) {
 	}
 }
 
+const writeDocumentTitle = function(pdf) {
+	pdf.setFontSize(16);
+	pdf.setFont(_fontName, "bold");
+	documentTitle = 'Scipio ' + _newsTitle + " van " + _exportStartDate.toLocaleDateString() + " t/m " + _exportEndDate.toLocaleDateString();
+	pdf.text(_viewLeft, _pageY, documentTitle);
+	_pageY += 8;
+}
+
 const fillNewsPageWithLineContent = function(pdf) {
 	console.log("fillNewsPageWithLineContent: " + _currentArticle + ", _pageY = " + _pageY);
 
@@ -191,12 +198,12 @@ const fillNewsPageWithLineContent = function(pdf) {
 		_pageY += 20;
 	}
 
-	pdf.setFontSize(18);
+	pdf.setFontSize(14);
 	pdf.setFont(_fontName, "bold");
 	articleTitle = newsArticle.getElementsByTagName("td").item(1).innerText;
 	pdf.text(_viewLeft, _pageY, articleTitle);
 	console.log("fillNewsPageWithLineContent: " + _currentArticle + ", articleTitle = " + articleTitle + ", _pageY = " + _pageY);
-	_pageY += 18;
+	_pageY += 14;
 
 	pdf.setFontSize(10);
 	pdf.setFont(_fontName, "normal");
