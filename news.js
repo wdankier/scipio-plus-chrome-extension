@@ -101,6 +101,7 @@ const newsExportButtonClickHandler = function() {
 	console.log("exporting news from " + _exportStartDate + " until " + _exportEndDate);
 
 	if (isFirstPage()) {
+		_busyExporting = true;
 		pdf = newPdf();
 		writeDocumentTitle(pdf);
 		readPage(pdf);
@@ -126,9 +127,20 @@ const readPage = function(pdf) {
 const readPageDone = function(pdf) {
 	if (isLastPage()) {
 		savePdf(pdf);
+		moveToFirstPageAfterExport();
 	} else {
 		setTimeout(function () {readPage(pdf);}, 1000);
 		clickNextPage();
+	}
+}
+
+const moveToFirstPageAfterExport = function() {
+	if (isFirstPage()) {
+		_busyExporting = false;
+		addNewsExportButton();
+	} else {
+		setTimeout(function () {moveToFirstPageAfterExport();}, 1000);
+		clickPrevPage();
 	}
 }
 
@@ -299,6 +311,44 @@ const continueAfterInvalidArticle = function(pdf) {
 	setTimeout(function () {readCurrentArticleLine(pdf);}, 250);
 }
 
+const createSelectOption = function(value, text, selected) {
+	option = document.createElement("option");
+	option.value = value;
+	option.text = text;
+	if (selected) {
+		option.setAttribute("selected", "selected");
+	}
+	return option;
+}
+
+const setDates = function() {
+	daySelect = document.getElementById("daySelect");
+
+	today = new Date();
+	thisDay = today.getDay();
+
+	selectedDay = daySelect.selectedIndex;
+
+	substactDays = thisDay - selectedDay;
+	if (substactDays < 1) {
+		substactDays += 7;
+	}
+
+	endDate = new Date();
+	endDate.setDate(today.getDate() - substactDays);
+	startDate = new Date();
+	startDate.setDate(endDate.getDate() - 13);
+
+	document.getElementById("exportDateFromInput").value = startDate.toISOString().slice(0,10);
+	document.getElementById("exportDateToInput").value = endDate.toISOString().slice(0,10);
+}
+
+const changeDaySelectHandler = function() {
+	daySelect = document.getElementById("daySelect");
+	localStorage.setItem("ScipioPlusExportSelectedDay", daySelect.selectedIndex);
+	setDates();
+}
+
 const addNewsExportButton = function() {
 	let addNewsButtons = document.querySelectorAll("button[ng-click='openNewsItem()']");
 
@@ -348,19 +398,33 @@ const addNewsExportButton = function() {
 		newsExportButton.innerText = "Exporteer " + _newsTitle + " als pdf";
 		newsExportButton.addEventListener("click", newsExportButtonClickHandler);
 
+		var selectedDaySaved = localStorage.getItem("ScipioPlusExportSelectedDay");
+		console.log("selectedDaySaved: " + selectedDaySaved);
+
+		if (selectedDaySaved) {
+			selectedDay = parseInt(selectedDaySaved);
+		} else {
+			selectedDay = 4;
+		}
+
+		daySelect = document.createElement("select");
+		daySelect.setAttribute("id", "daySelect");
+		daySelect.appendChild(createSelectOption(0, "Zondag", selectedDay == 0));
+		daySelect.appendChild(createSelectOption(1, "Maandag", selectedDay == 1));
+		daySelect.appendChild(createSelectOption(2, "Dinsdag", selectedDay == 2));
+		daySelect.appendChild(createSelectOption(3, "Woensdag", selectedDay == 3));
+		daySelect.appendChild(createSelectOption(4, "Donderdag", selectedDay == 4));
+		daySelect.appendChild(createSelectOption(5, "Vrijdag", selectedDay == 5));
+		daySelect.appendChild(createSelectOption(6, "Zaterdag", selectedDay == 6));
+		daySelect.addEventListener("change", changeDaySelectHandler);
+
 		exportBtnGroup.appendChild(exportDateFromLabel);
 		exportBtnGroup.appendChild(exportDateFromInput);
 		exportBtnGroup.appendChild(exportDateToLabel);
+		exportBtnGroup.appendChild(daySelect);
 		exportBtnGroup.appendChild(exportDateToInput);
 		exportBtnGroup.appendChild(newsExportButton);
 
-		today = new Date();
-		endDate = new Date();
-		endDate.setDate(today.getDate() - today.getDay());
-		startDate = new Date();
-		startDate.setDate(endDate.getDate() - 13);
-
-		document.getElementById("exportDateFromInput").value = startDate.toISOString().slice(0,10);
-		document.getElementById("exportDateToInput").value = endDate.toISOString().slice(0,10);
+		setDates();
 	}
 }

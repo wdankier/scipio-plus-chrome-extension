@@ -68,6 +68,7 @@ const getAllPages = function() {
 }
 
 const exportButtonClickHandler = function() {
+	_busyExporting = true;
 	let content = getAllPages();
 
 	let filterSelector = document.querySelectorAll("select[ng-model='filterMembers.selectedStatus']").item(0);
@@ -87,6 +88,7 @@ const exportButtonClickHandler = function() {
 
 	document.body.removeChild(link)
 	window.URL.revokeObjectURL(url)
+	_busyExporting = false;
 }
 
 const addMemberExportButton = function() {

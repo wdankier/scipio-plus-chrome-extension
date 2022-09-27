@@ -1,8 +1,6 @@
 async function sendTabUrl() {
   chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
     tab = tabs[0];
-//    console.log("Updated " + new Date());
-    //console.log(tab);
     if (tab.url && tab.url.includes("https://www.socie.nl/beheer")) {
       if (tab.url.includes("members_settings/members")) {
         let msg = {message: 'members_page', url: tab.url};

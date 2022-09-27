@@ -1,9 +1,15 @@
+var _busyExporting = false;
+
 const messageHandler = function(request, sender, sendResponse) {
 	console.log(request);
 	if (request && request.message && request.message === 'members_page') {
-		setTimeout(function () {addMemberExportButton();}, 2000);
+		if (_busyExporting === false) {
+			setTimeout(function () {addMemberExportButton();}, 2000);
+		}
 	} else if (request && request.message && request.message === 'news_page') {
-		setTimeout(function () {addNewsExportButton();}, 2000);
+		if (_busyExporting === false) {
+			setTimeout(function () {addNewsExportButton();}, 2000);
+		}
 	}
 }
 
