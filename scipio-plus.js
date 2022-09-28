@@ -6,11 +6,14 @@ const messageHandler = function(request, sender, sendResponse) {
 		if (_busyExporting === false) {
 			setTimeout(function () {addMemberExportButton();}, 2000);
 		}
+		sendResponse(true);
 	} else if (request && request.message && request.message === 'news_page') {
 		if (_busyExporting === false) {
 			setTimeout(function () {addNewsExportButton();}, 2000);
 		}
+		sendResponse(true);
 	}
+	sendResponse(false);
 }
 
 chrome.runtime.onMessage.addListener(messageHandler);

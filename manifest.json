@@ -12,7 +12,7 @@
 	"content_scripts": [
 		{
 			"matches": ["*://*.socie.nl/beheer/*"],
-			"js": ["jspdf.umd.min.js",
+			"js": ["jspdf.umd.min.js","jspdf.umd.min.js.map",
 				"news.js", "members.js", "scipio-plus.js"]
 		}
 	],

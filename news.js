@@ -213,6 +213,11 @@ const fillNewsPageWithLineContent = function(pdf) {
 	pdf.setFontSize(14);
 	pdf.setFont(_fontName, "bold");
 	articleTitle = newsArticle.getElementsByTagName("td").item(1).innerText;
+	if (articleTitle) {
+		articleTitle = articleTitle.trim();
+	} else {
+		articleTitle = "Naamloos artikel";
+	}
 	pdf.text(_viewLeft, _pageY, articleTitle);
 	console.log("fillNewsPageWithLineContent: " + _currentArticle + ", articleTitle = " + articleTitle + ", _pageY = " + _pageY);
 	_pageY += 14;
