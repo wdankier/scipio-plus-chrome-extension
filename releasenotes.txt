@@ -1,0 +1,15 @@
+New in version 0.3.2
+- Fix bugs when messaging between background and main extension script
+- The newstitle gets trimmed when needed and has an untitled text when missing
+- Added this releasenotes textfile
+
+New in version 0.3.1
+- Added a day-of-the-week selector, to auto select the date field. When selecting a day (like monday), the end-date will be the previous monday. So when the current day is monday, it will will the end-date-fied with the previous monday (a week ago).
+- The selection will be stored in the localStorage of the browser. The date fields are not stored.
+- While exporting, the export control of this extension will not be draw until the export is finished.
+
+New in version 0.3
+- Added a title to the pdf coument reflecting the newpages name and the chosen dates.
+
+New in version 0.2
+- Exporting news items has now a date filter. For now it is prepopulated to export articles from last monday, two weeks ago, until the previous sunday.
