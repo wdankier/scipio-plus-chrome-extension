@@ -1,3 +1,7 @@
+New in version 0.3.3
+- export news: Fix bugs when calculating the startDate and endDate based on the choosen day of the week
+- export news: Added a label below the export button to show the rendered dates with day name for visual verification
+
 New in version 0.3.2
 - Fix bugs when messaging between background and main extension script
 - The newstitle gets trimmed when needed and has an untitled text when missing

@@ -334,24 +334,35 @@ const setDates = function() {
 
 	selectedDay = daySelect.selectedIndex;
 
-	substactDays = thisDay - selectedDay;
-	if (substactDays < 1) {
-		substactDays += 7;
+	subtractDays = thisDay - selectedDay;
+	if (subtractDays < 1) {
+		subtractDays += 7;
 	}
 
-	endDate = new Date();
-	endDate.setDate(today.getDate() - substactDays);
-	startDate = new Date();
-	startDate.setDate(endDate.getDate() - 13);
+	now = Date.now();
+	endDateMs = now - (subtractDays * 24 * 60 * 60 * 1000);
+	startDateMs = now - ((subtractDays + 13) * 24 * 60 * 60 * 1000);
+
+	endDate = new Date(endDateMs);
+	startDate = new Date(startDateMs);
 
 	document.getElementById("exportDateFromInput").value = startDate.toISOString().slice(0,10);
 	document.getElementById("exportDateToInput").value = endDate.toISOString().slice(0,10);
+
+	setExportDescription();
 }
 
 const changeDaySelectHandler = function() {
 	daySelect = document.getElementById("daySelect");
 	localStorage.setItem("ScipioPlusExportSelectedDay", daySelect.selectedIndex);
 	setDates();
+}
+
+const setExportDescription = function() {
+	exportDescription = document.getElementById("exportDescription");
+	vanaf = (new Date(document.getElementById("exportDateFromInput").value)).toUTCString().replaceAll("00:00:00 GMT", "");
+	tm = (new Date(document.getElementById("exportDateToInput").value)).toUTCString().replaceAll("00:00:00 GMT", "");
+	exportDescription.innerText = "Export vanaf '" + vanaf + "' t/m '" + tm + "'";
 }
 
 const addNewsExportButton = function() {
@@ -388,6 +399,7 @@ const addNewsExportButton = function() {
 		exportDateFromInput = document.createElement("input");
 		exportDateFromInput.setAttribute("id", "exportDateFromInput");
 		exportDateFromInput.setAttribute("type", "date");
+		exportDateFromInput.addEventListener("change", setExportDescription);
 
 		exportDateToLabel = document.createElement("label");
 		exportDateToLabel.setAttribute("for", "exportDateToInput");
@@ -396,6 +408,7 @@ const addNewsExportButton = function() {
 		exportDateToInput = document.createElement("input");
 		exportDateToInput.setAttribute("id", "exportDateToInput");
 		exportDateToInput.setAttribute("type", "date");
+		exportDateToInput.addEventListener("change", setExportDescription);
 
 		newsExportButton = document.createElement("button");
 		newsExportButton.setAttribute("id", "newsExportButton");
@@ -423,12 +436,16 @@ const addNewsExportButton = function() {
 		daySelect.appendChild(createSelectOption(6, "Zaterdag", selectedDay == 6));
 		daySelect.addEventListener("change", changeDaySelectHandler);
 
+		exportDescription = document.createElement("div");
+		exportDescription.setAttribute("id", "exportDescription");
+
 		exportBtnGroup.appendChild(exportDateFromLabel);
 		exportBtnGroup.appendChild(exportDateFromInput);
 		exportBtnGroup.appendChild(exportDateToLabel);
 		exportBtnGroup.appendChild(daySelect);
 		exportBtnGroup.appendChild(exportDateToInput);
 		exportBtnGroup.appendChild(newsExportButton);
+		exportBtnGroup.appendChild(exportDescription);
 
 		setDates();
 	}
