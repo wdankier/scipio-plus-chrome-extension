@@ -2,7 +2,7 @@
 	"manifest_version": 3,
 	"name": "Scipio Plus",
 	"description": "Deze extensie voegt functies toe voor beheerders om het verzamelen van gegevens op het scherm makkelijker te maken",
-	"version": "0.3.3",
+	"version": "0.3.4",
 	"permissions": ["tabs", "background"],
 	"icons" : {
 		"16": "/images/scipio-plus-logo-16.png",
@@ -11,7 +11,7 @@
 	},
 	"content_scripts": [
 		{
-			"matches": ["*://*.socie.nl/beheer/*"],
+			"matches": ["*://beheer.socie.nl/*"],
 			"js": ["jspdf.umd.min.js","jspdf.umd.min.js.map",
 				"news.js", "members.js", "scipio-plus.js"]
 		}
