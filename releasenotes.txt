@@ -1,3 +1,6 @@
+New in version 0.3.4
+- Support for the changed administration domain beheer.socie.nl
+
 New in version 0.3.3
 - export news: Fix bugs when calculating the startDate and endDate based on the choosen day of the week
 - export news: Added a label below the export button to show the rendered dates with day name for visual verification
