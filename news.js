@@ -1,10 +1,31 @@
 let _pageWidth = 595, _pageHeight = 842;
-let _pageTopMargin = 57, _pageBottomMargin = 57, _pageLeftMargin = 57, _pageRightMargin = 57;
+let _pageTopMargin = 42, _pageBottomMargin = 42, _pageLeftMargin = 42, _pageRightMargin = 42;
 let _headerHeight = 35, _footerHeight = 43;
 let _viewLeft = _pageLeftMargin, _viewTop = _pageTopMargin, _viewRight = _pageWidth - _pageRightMargin, _viewBottom = _pageHeight - _pageBottomMargin;
 let _viewWidth = _pageWidth - _pageLeftMargin - _pageRightMargin, _viewHeight = _pageHeight - _pageTopMargin - _pageBottomMargin;
 let _footerY = _pageHeight - _footerHeight;
 let _fontName = "helvetica";
+
+let _fontSizeFooter = 8;
+let _fontTypeFooter = "italic";
+
+let _fontSizeTitle = 14; // was 16
+let _fontTypeTitle = "bold"
+
+let _fontSizeArticleTitle = 12; // was 14
+let _fontTypeArticleTitle = "bold"
+
+let _fontSizePublicationDate = 8;
+let _fontTypePublicationDate = "normal"
+
+let _fontSizeArticleIntro = 11; // was 12
+let _fontTypeArticleIntro = "bold"
+
+let _fontSizeArticleContent = 11; // was 12
+let _fontTypeArticleContent = "normal"
+
+let _drawLayoutLines = false;
+
 var _currentArticle = 0;
 var _validArticles = 0;
 var _pageY = 0;
@@ -62,21 +83,77 @@ const newPdf = function() {
 
 	var { jsPDF } = window.jspdf;
 	var pdf = new jsPDF(jsPdfOptions);
+	drawViewBox(pdf);
 	return pdf;
 }
 
 const newPage = function(pdf) {
 	pdf.addPage();
+	drawViewBox(pdf);
 	_pageNr++;
 	_pageCount++;
 	_pageY = _viewTop;
 }
 
+const drawViewBox = function(pdf) {
+	if (_drawLayoutLines) {
+		pdf.setDrawColor(0,0,255);
+		pdf.line(_viewLeft, _viewTop, _viewRight, _viewTop); // Top line
+		pdf.line(_viewLeft, _viewBottom, _viewRight, _viewBottom); // Bottom line
+		pdf.line(_viewLeft, _viewTop, _viewLeft, _viewBottom); // Left line
+		pdf.line(_viewRight, _viewTop, _viewRight, _viewBottom); // Right line
+		pdf.setDrawColor(0,0,0);
+	}
+}
+
+const drawBlackLine = function(pdf) {
+	pdf.setDrawColor(0,0,0);
+	pdf.line(_viewLeft, _pageY, _viewRight, _pageY);
+	pdf.setDrawColor(0,0,0);
+}
+
+const drawGreyLine = function(pdf) {
+	pdf.setDrawColor(127,127,127);
+	pdf.line(_viewLeft, _pageY, _viewRight, _pageY);
+	pdf.setDrawColor(0,0,0);
+}
+
+const drawRedLine = function(pdf) {
+	if (_drawLayoutLines) {
+		pdf.setDrawColor(255,0,0);
+		pdf.line(_viewLeft, _pageY, _viewRight, _pageY);
+		pdf.setDrawColor(0,0,0);
+	}
+}
+
+const drawGreenLine = function(pdf) {
+	if (_drawLayoutLines) {
+		pdf.setDrawColor(0,255,0);
+		pdf.line(_viewLeft, _pageY, _viewRight, _pageY);
+		pdf.setDrawColor(0,0,0);
+	}
+}
+
+const drawBlueLine = function(pdf) {
+	if (_drawLayoutLines) {
+		pdf.setDrawColor(0,0,255);
+		pdf.line(_viewLeft, _pageY, _viewRight, _pageY);
+		pdf.setDrawColor(0,0,0);
+	}
+}
+
+const setFont = function(pdf, fontSize, fontStyle) {
+	pdf.setFont(_fontName, fontStyle).setFontSize(fontSize);
+	return pdf.getFontSize() * pdf.getLineHeightFactor();
+}
+
 const writePageFooter = function(pdf) {
-	pdf.setFontSize(10);
-	pdf.setFont(_fontName, "normal");
-	pdf.text(_viewLeft, _footerY, 'Scipio ' + _newsTitle + ', samengesteld op ' + _now.toLocaleString());
-	pdf.text(_viewRight, _footerY, 'Pagina ' + _pageNr + " van " + _pageCount, 'right');
+	var footerLineHeight = setFont(pdf, _fontSizeFooter, _fontTypeFooter);
+	_pageY = _footerY;
+	drawGreyLine(pdf);
+	_pageY += footerLineHeight;
+	pdf.text(_viewLeft, _pageY, 'Scipio ' + _newsTitle + ', samengesteld op ' + _now.toLocaleString());
+	pdf.text(_viewRight, _pageY, 'Pagina ' + _pageNr + " van " + _pageCount, 'right');
 }
 
 const savePdf = function(pdf) {
@@ -194,41 +271,49 @@ const readCurrentArticleLine = function(pdf) {
 }
 
 const writeDocumentTitle = function(pdf) {
-	pdf.setFontSize(16);
-	pdf.setFont(_fontName, "bold");
+	var titleLineHeight = setFont(pdf, _fontSizeTitle, _fontTypeTitle);
 	documentTitle = 'Scipio ' + _newsTitle + " van " + _exportStartDate.toLocaleDateString() + " t/m " + _exportEndDate.toLocaleDateString();
+	_pageY += titleLineHeight;
 	pdf.text(_viewLeft, _pageY, documentTitle);
-	_pageY += 8;
 }
 
 const fillNewsPageWithLineContent = function(pdf) {
 	console.log("fillNewsPageWithLineContent: " + _currentArticle + ", _pageY = " + _pageY);
 
-	if (!newPageIfNeeded(pdf, 40)) {
-		_pageY += 10;
-		pdf.line(_viewLeft, _pageY, _viewRight, _pageY);
-		_pageY += 20;
+	var articleTitleLineHeight = setFont(pdf, _fontSizeArticleTitle, _fontTypeArticleTitle);
+	var publicationDateLineHeight = setFont(pdf, _fontSizePublicationDate, _fontTypePublicationDate);
+	var articleLineHeight = setFont(pdf, _fontSizeArticleContent, _fontTypeArticleContent);
+	var heightNeeded = articleTitleLineHeight + publicationDateLineHeight * 2 + articleLineHeight;
+	if (!newPageIfNeeded(pdf, heightNeeded)) {
+		_pageY += articleTitleLineHeight / 2;
+		drawBlackLine(pdf);
+		_pageY += articleTitleLineHeight / 2;
 	}
 
-	pdf.setFontSize(14);
-	pdf.setFont(_fontName, "bold");
+	// Print article title
+	var articleTitleLineHeight = setFont(pdf, _fontSizeArticleTitle, _fontTypeArticleTitle);
 	articleTitle = newsArticle.getElementsByTagName("td").item(1).innerText;
 	if (articleTitle) {
 		articleTitle = articleTitle.trim();
 	} else {
 		articleTitle = "Naamloos artikel";
 	}
+	_pageY += articleTitleLineHeight;
 	pdf.text(_viewLeft, _pageY, articleTitle);
+	drawRedLine(pdf);
 	console.log("fillNewsPageWithLineContent: " + _currentArticle + ", articleTitle = " + articleTitle + ", _pageY = " + _pageY);
-	_pageY += 14;
 
-	pdf.setFontSize(10);
-	pdf.setFont(_fontName, "normal");
+	// Print publication Date
+	var publicationDateLineHeight = setFont(pdf, _fontSizePublicationDate, _fontTypePublicationDate);
 	publicatie = newsArticle.getElementsByTagName("td").item(2).innerText;
+	_pageY += publicationDateLineHeight;
 	pdf.text(_viewLeft, _pageY, "Publicatiedatum: " + publicatie.replaceAll("\n"," "));
+	drawGreenLine(pdf);
 	console.log("fillNewsPageWithLineContent: " + _currentArticle + ", publicatie = " + publicatie + ", _pageY = " + _pageY);
-	_pageY += 10;
+	_pageY += publicationDateLineHeight;
+	drawRedLine(pdf);
 
+	// Open the new article contents
 	console.log("fillNewsPageWithLineContent: " + _currentArticle + ", newsArticle.click(), _pageY = " + _pageY);
 	newsArticle.click();
 
@@ -238,64 +323,63 @@ const fillNewsPageWithLineContent = function(pdf) {
 const fillNewsPageWithNewsContent = function(pdf) {
 	console.log("fillNewsPageWithNewsContent: " + _currentArticle + ", _pageY = " + _pageY);
 
+	// Print article intro
 	inleiding = document.getElementsByTagName("textarea").item(0).value;
 	if (inleiding) {
-		_pageY += 10;
 		console.log("fillNewsPageWithNewsContent: " + _currentArticle + ", inleiding = " + inleiding + ", _pageY = " + _pageY);
 
-		lines = pdf.setFontSize(12)
-			.setFont(_fontName, "bold")
-			.splitTextToSize(inleiding, _viewWidth);
-
-		lineHeight = pdf.getFontSize() * pdf.getLineHeightFactor();
-		for (let line in lines) {
-			if (newPageIfNeeded(pdf, lineHeight)) {
-				pdf.setFontSize(12).setFont(_fontName, "bold");
-			}
-			pdf.text(_viewLeft, _pageY, lines[line]);
-			_pageY += lineHeight;
-		}
+		printMultilineText(pdf, _fontSizeArticleIntro, _fontTypeArticleIntro, inleiding, false);
 	}
 
+	// Print article content
 	bericht = document.getElementsByTagName("textarea").item(1).value;
 	if (bericht) {
-		_pageY += 10;
 		console.log("fillNewsPageWithNewsContent: " + _currentArticle + ", bericht, _pageY = " + _pageY);
 
-		bericht = bericht.replaceAll(/<li>/gi, "• ")
-						.replaceAll(/<\/li>/gi, "")
-						.replaceAll(/<ul>/gi, "")
-						.replaceAll(/<\/ul>/gi, "\n")
-						.replaceAll(/<br>/gi, "\n")
-						.replaceAll(/<\/?b>/gi, "")
-						.replaceAll(/<\/?i>/gi, "")
-						.replaceAll(/<\/?u>/gi, "")
-						.replaceAll(/<a href=[\'\"].+[\'\"]>/g, "")
-						.replaceAll(/<\/a>/g,"");
+		bericht = bericht.replaceAll(/\u200b/g, "") /* Replace special Word characters*/
+						.replaceAll(/<li>/gi, "• ") /* Maak Bullet points */
+						.replaceAll(/<\/li>/gi, "") /* Verwijder einde van bullet point */
+						.replaceAll(/<ul>/gi, "") /* verwijder begin van list */
+						.replaceAll(/<\/ul>/gi, "\n") /* verwijder eind van list */
+						.replaceAll(/^[ ]+/gi, "") /* remove spaces on the start line */
+						.replaceAll(/[ ]+$/gi, "") /* remove spaces on the end line */
+						.replaceAll(/<br>/gi, "\n") /* replace breakpoints met new line */
+						.replaceAll(/\n{3,}/gi, "\n\n") /* replace 3 or more multiple line endings */
+						.replaceAll(/<\/?b>/gi, "") /* remove bold tags */
+						.replaceAll(/<\/?i>/gi, "") /* remove italic tags */
+						.replaceAll(/<\/?u>/gi, "") /* remove underline tags */
+						.replaceAll(/<a href=[\'\"][^\s]+[\'\"]>/g, "") /* remove anchors */
+						.replaceAll(/<\/a>/g, "") /* remove anchor end */
+						.replaceAll(/[ ]{2,}/g, " ") /* replace multiple spaces with 1 space */
+						.replaceAll(/\n*Klik.+givt\n*/gi, "");
 
-		lines = pdf.setFontSize(12)
-			.setFont(_fontName, "normal")
-			.splitTextToSize(bericht, _viewWidth);
-
-		lineHeight = pdf.getFontSize() * pdf.getLineHeightFactor();
-		for (let line in lines) {
-			if (newPageIfNeeded(pdf, lineHeight)) {
-				pdf.setFontSize(12).setFont(_fontName, "normal");
-			}
-			pdf.text(_viewLeft, _pageY, lines[line]);
-			_pageY += lineHeight;
-		}
+		printMultilineText(pdf, _fontSizeArticleContent, _fontTypeArticleContent, bericht, inleiding);
 	}
 
-
+	// Back to the list
 	console.log("fillNewsPageWithNewsContent: " + _currentArticle + ", cancel.click(), _pageY = " + _pageY);
 	document.getElementsByClassName("cancel").item(0).click();
 
 	setTimeout(function () {afterFillNewsPageWithNewsContent(pdf);}, 1000);
 }
 
-const newPageIfNeeded = function(pdf, height) {
-	if (_pageTopMargin + _viewHeight < _pageY + height) {
+const printMultilineText = function(pdf, fontSize, fontType, text, extraLine) {
+	lineHeight = setFont(pdf, fontSize, fontType);
+	if (extraLine) {
+		_pageY += lineHeight;
+	}
+	lines = pdf.splitTextToSize(text, _viewWidth);
+	for (let line in lines) {
+		if (newPageIfNeeded(pdf, lineHeight)) {
+			setFont(pdf, fontSize, fontType);
+		}
+		_pageY += lineHeight;
+		pdf.text(_viewLeft, _pageY, lines[line]);
+	}
+}
+
+const newPageIfNeeded = function(pdf, heightNeeded) {
+	if (_footerY < _pageY + heightNeeded) {
 		newPage(pdf);
 		return true;
 	} else {
