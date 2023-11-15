@@ -1,3 +1,9 @@
+New in version 0.4.0
+- Artcile lines starting with <b> and ending with </b> are printed bold
+- Article lines starting with <a href='http' and ending with </a> are created as a link and printed in blue
+- Audio URL, Video URL, Website URL are printed below the article with a clickable link
+- Fixed a loop when exporting due to a bug in Scipio Admin when an opend article from page 2 or later is closed with the cancel button and admin return to page 1
+
 New in version 0.3.4
 - Support for the changed administration domain beheer.socie.nl
 

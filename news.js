@@ -26,7 +26,11 @@ let _fontTypeArticleContent = "normal"
 
 let _drawLayoutLines = false;
 
+let _maxPage = 3;
+
 var _currentArticle = 0;
+var _currentArticlePage = 0;
+var _currentPageName = '?';
 var _validArticles = 0;
 var _pageY = 0;
 
@@ -59,13 +63,35 @@ const isFirstPage = function() {
 }
 
 const clickNextPage = function() {
+	console.log("CLICK NEXT PAGE");
 	pageItems = document.getElementsByClassName("pagination").item(0).getElementsByTagName("li");
 	pageItems.item(pageItems.length - 1).getElementsByTagName("a").item(0).click();
+	_currentArticlePage = _currentArticlePage + 1;
 }
 
 const clickPrevPage = function() {
+	console.log("CLICK PREV PAGE");
 	pageItems = document.getElementsByClassName("pagination").item(0).getElementsByTagName("li");
 	pageItems.item(0).getElementsByTagName("a").item(0).click();
+	_currentArticlePage = _currentArticlePage - 1;
+}
+
+const clickFirstPage = function() {
+	console.log("CLICK FIRST PAGE");
+	pageItems = document.getElementsByClassName("pagination").item(0).getElementsByTagName("li");
+	pageItems.item(1).getElementsByTagName("a").item(0).click();
+	_currentArticlePage = 1;
+}
+
+const getCurrentPageName = function() {
+	let pagination = document.getElementsByClassName("pagination");
+	if (pagination.length > 0) {
+		activeElements = pagination.item(0).getElementsByClassName("active");
+		if (activeElements.length > 0) {
+			return activeElements.item(0).getElementsByTagName("a").item(0).text;
+		}
+	}
+	return '?';
 }
 
 const newPdf = function() {
@@ -179,6 +205,7 @@ const newsExportButtonClickHandler = function() {
 
 	if (isFirstPage()) {
 		_busyExporting = true;
+		_currentArticlePage = 1;
 		pdf = newPdf();
 		writeDocumentTitle(pdf);
 		readPage(pdf);
@@ -188,25 +215,61 @@ const newsExportButtonClickHandler = function() {
 	}
 }
 
+const getArticlesTable = function() {
+	var tables = document.getElementsByTagName("table");
+	return tables.item(tables.length-1);
+}
+
+const getNewsArticles = function() {
+	var articlesTable = getArticlesTable();
+	return articlesTable.getElementsByTagName("tr");
+}
+
+const getCurrentNewsArticle = function() {
+	var newsArticles = getNewsArticles();
+	return newsArticles.item(_currentArticle);
+}
+
 const readPage = function(pdf) {
-	console.log("readPage");
-	tables = document.getElementsByTagName("table");
-	lastTable = tables.item(tables.length-1);
-	newsArticles = lastTable.getElementsByTagName("tr");
+	_currentPageName = getCurrentPageName();
+	console.log("readPage: " + _currentArticlePage + " '"+ getCurrentPageName() + "'");
+	newsArticles = getNewsArticles();
+	console.log("newsArticles.length = " + newsArticles.length);
 	_validArticles = 0;
 
 	if (newsArticles.length > 1) {
 		_currentArticle = 1;
-		readCurrentArticleLine(pdf, newsArticles);
+		readCurrentArticleLine(pdf);
+	}
+}
+
+const readCurrentArticleLine = function(pdf) {
+	console.log("********************************************************************************");
+	console.log("readCurrentArticleLine: " + _currentArticle + " on page '" + getCurrentPageName() + "'");
+	var newsArticle = getCurrentNewsArticle();
+	if (newsArticle) {
+		if (newsArticleIsValid(pdf, newsArticle)) {
+			_validArticles++;
+			fillNewsPageWithLineContent(pdf);
+		} else {
+			continueAfterInvalidArticle(pdf);
+		}
+	} else {
+		console.log("No news Article " + _currentArticle + " on page '" + getCurrentPageName() + "'");
+		setTimeout(function () {readPageDone(pdf);}, 1000);
 	}
 }
 
 const readPageDone = function(pdf) {
-	if (isLastPage()) {
+	console.log("readPageDone: '" + getCurrentPageName() + "'");
+	if (isLastPage() || (Number(_currentPageName) > _maxPage)) {
+		console.log("isLastPage(): '" + getCurrentPageName() + "'");
 		savePdf(pdf);
 		moveToFirstPageAfterExport();
 	} else {
+		console.log("isNot LastPage(): '" + getCurrentPageName() + "'");
 		setTimeout(function () {readPage(pdf);}, 1000);
+		console.log("next Page Please: '" + getCurrentPageName() + "'");
 		clickNextPage();
 	}
 }
@@ -217,7 +280,7 @@ const moveToFirstPageAfterExport = function() {
 		addNewsExportButton();
 	} else {
 		setTimeout(function () {moveToFirstPageAfterExport();}, 1000);
-		clickPrevPage();
+		clickFirstPage();
 	}
 }
 
@@ -243,37 +306,22 @@ const newsArticleIsValid = function(pdf, newsArticle) {
 		articleDate = new Date(articleYear+'-'+articleMonth+'-'+articleDay);
 		articleDate.setHours(0,0,0,0);
 		if (articleDate >= _exportStartDate && articleDate <= _exportEndDate) {
+			console.log("Article is valid");
 			return true;
-		}
-
-		// !newsArticle.getElementsByTagName("td").item(2).innerText.includes("Verlopen")
-		
-	}
-	return false;
-}
-
-const readCurrentArticleLine = function(pdf) {
-	console.log("readCurrentArticleLine: " + _currentArticle);
-	tables = document.getElementsByTagName("table");
-	lastTable = tables.item(tables.length-1);
-	newsArticles = lastTable.getElementsByTagName("tr");
-	newsArticle = newsArticles.item(_currentArticle);
-	if (newsArticle) {
-		if (newsArticleIsValid(pdf, newsArticle)) {
-			_validArticles++;
-			fillNewsPageWithLineContent(pdf);
 		} else {
-			continueAfterInvalidArticle(pdf);
+			console.log("Article is not valid: Invalid dates: articleDate: " + articleDate + ", dateRange: (" + _exportStartDate + ", " + _exportEndDate + ")");
 		}
 	} else {
-		setTimeout(function () {readPageDone(pdf);}, 1000);
+		console.log("Article is not valid: No News Article");
 	}
+	return false;
 }
 
 const writeDocumentTitle = function(pdf) {
 	var titleLineHeight = setFont(pdf, _fontSizeTitle, _fontTypeTitle);
 	documentTitle = 'Scipio ' + _newsTitle + " van " + _exportStartDate.toLocaleDateString() + " t/m " + _exportEndDate.toLocaleDateString();
 	_pageY += titleLineHeight;
+	console.log("writeDocumentTitle: " + documentTitle);
 	pdf.text(_viewLeft, _pageY, documentTitle);
 }
 
@@ -292,7 +340,8 @@ const fillNewsPageWithLineContent = function(pdf) {
 
 	// Print article title
 	var articleTitleLineHeight = setFont(pdf, _fontSizeArticleTitle, _fontTypeArticleTitle);
-	articleTitle = newsArticle.getElementsByTagName("td").item(1).innerText;
+	var newsArticle = getCurrentNewsArticle();
+	var articleTitle = newsArticle.getElementsByTagName("td").item(1).innerText;
 	if (articleTitle) {
 		articleTitle = articleTitle.trim();
 	} else {
@@ -317,7 +366,7 @@ const fillNewsPageWithLineContent = function(pdf) {
 	console.log("fillNewsPageWithLineContent: " + _currentArticle + ", newsArticle.click(), _pageY = " + _pageY);
 	newsArticle.click();
 
-	setTimeout(function () {fillNewsPageWithNewsContent(pdf);}, 1000);
+	setTimeout(function () {fillNewsPageWithNewsContent(pdf);}, 2000);
 }
 
 const fillNewsPageWithNewsContent = function(pdf) {
@@ -345,37 +394,147 @@ const fillNewsPageWithNewsContent = function(pdf) {
 						.replaceAll(/[ ]+$/gi, "") /* remove spaces on the end line */
 						.replaceAll(/<br>/gi, "\n") /* replace breakpoints met new line */
 						.replaceAll(/\n{3,}/gi, "\n\n") /* replace 3 or more multiple line endings */
-						.replaceAll(/<\/?b>/gi, "") /* remove bold tags */
 						.replaceAll(/<\/?i>/gi, "") /* remove italic tags */
 						.replaceAll(/<\/?u>/gi, "") /* remove underline tags */
-						.replaceAll(/<a href=[\'\"][^\s]+[\'\"]>/g, "") /* remove anchors */
-						.replaceAll(/<\/a>/g, "") /* remove anchor end */
-						.replaceAll(/[ ]{2,}/g, " ") /* replace multiple spaces with 1 space */
-						.replaceAll(/\n*Klik.+givt\n*/gi, "");
+						.replaceAll(/[ ]{2,}/g, " "); /* replace multiple spaces with 1 space */
+						//.replaceAll(/\n*Klik.+givt\n*/gi, "");
 
 		printMultilineText(pdf, _fontSizeArticleContent, _fontTypeArticleContent, bericht, inleiding);
 	}
 
+	// Print Audio link
+	var audios = document.querySelectorAll('[ng-model="newsItem.audioUrl"]');
+	if (audios.length > 0) {
+		var audioUrl = audios.item(0).value;
+		if (audioUrl) {
+			console.log("Audio Url: " + audioUrl);
+			printArticleUrl(pdf, _fontSizeArticleContent, _fontTypeArticleContent, "Audio:", audioUrl);
+		}
+	}
+
+	// Print video link
+	var videos = document.querySelectorAll('[ng-model="newsItem.videoUrl"]');
+	if (videos.length > 0) {
+		var videoUrl = videos.item(0).value;
+		if (videoUrl) {
+			console.log("Video Url: " + videoUrl);
+			printArticleUrl(pdf, _fontSizeArticleContent, _fontTypeArticleContent, "Video:", videoUrl);
+		}
+	}
+
+	// Print website link
+	var websites = document.querySelectorAll('[ng-model="newsItem.articleUrl"]');
+	if (websites.length > 0) {
+		var websiteUrl = websites.item(0).value;
+		if (websiteUrl) {
+			console.log("Website Url: " + websiteUrl);
+			printArticleUrl(pdf, _fontSizeArticleContent, _fontTypeArticleContent, "Website:", websiteUrl);
+		}
+	}
+
 	// Back to the list
 	console.log("fillNewsPageWithNewsContent: " + _currentArticle + ", cancel.click(), _pageY = " + _pageY);
-	document.getElementsByClassName("cancel").item(0).click();
+	clickCancel();
 
 	setTimeout(function () {afterFillNewsPageWithNewsContent(pdf);}, 1000);
 }
 
+const clickCancel = function() {
+	console.log("Click Cancel");
+	document.getElementsByClassName("cancel").item(0).click();
+}
+
 const printMultilineText = function(pdf, fontSize, fontType, text, extraLine) {
+//	console.log("rawText: " + text);
 	lineHeight = setFont(pdf, fontSize, fontType);
 	if (extraLine) {
 		_pageY += lineHeight;
 	}
-	lines = pdf.splitTextToSize(text, _viewWidth);
+	var textWithoutMarkings = removeAnchors(text);
+	textWithoutMarkings = removeBold(textWithoutMarkings);
+
+//	console.log("textWithoutMarkings: " + textWithoutMarkings);
+
+	lines = pdf.splitTextToSize(textWithoutMarkings, _viewWidth);
+	var lineText = '';
+	var orgText = '';
+	var orgLineRegEx = null;
 	for (let line in lines) {
 		if (newPageIfNeeded(pdf, lineHeight)) {
 			setFont(pdf, fontSize, fontType);
 		}
 		_pageY += lineHeight;
-		pdf.text(_viewLeft, _pageY, lines[line]);
+
+		lineText = lines[line];
+		orgText = lineText;
+		if (lineText.trim().length > 0) {
+//			console.log("rawline: " + lineText);
+
+			var regexText = escapeRegExp(lineText);
+
+//			console.log("regexText: " + regexText);
+
+			orgLineRegEx = new RegExp("^(.*" + regexText + ".*)$","gm");
+			//console.log(orgLineRegEx);
+			var orgMatch = orgLineRegEx.exec(text);
+//			if (orgMatch) {
+//				console.log(orgMatch);
+//			}
+			if (orgMatch && (orgMatch.length > 1)) {
+				orgText = orgMatch[1];
+				console.log("orgline: " + orgText);
+			}
+		}
+		if (/^<b>.+<\/b>/gi.test(orgText)) {
+			console.log("Bold line: " + orgText);
+			setFont(pdf, fontSize, "bold");
+			lineText = lineText.replaceAll(/<\/?b>/gi, "");
+		} else {
+			setFont(pdf, fontSize, fontType);
+		}
+		if (/^<a href=[\'\"]https?.+<\/a>/gi.test(orgText)) {
+			var match = /href='(https?[^']+)'/.exec(orgText);
+			var url = match[1];
+			lineText = removeAnchors(orgText);
+			lineText = removeBold(lineText);
+			console.log("URL(" + url + ") line: " + lineText);
+			var options = {};
+			options.url = url;
+			pdf.setTextColor(0, 0, 255);
+			pdf.textWithLink(lineText, _viewLeft, _pageY, options);
+			pdf.setTextColor(0, 0, 0);
+		} else {
+			lineText = removeAnchors(lineText);
+			lineText = removeBold(lineText);
+			pdf.text(_viewLeft, _pageY, lineText);
+		}
 	}
+}
+
+const escapeRegExp = function(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+}
+const removeAnchors = function(text) {
+	return text.replaceAll(/<a href=[\'\"][^\s]+[\'\"]>/g, "").replaceAll(/<\/a>/g, "");
+}
+const removeBold = function(text) {
+	return text.replaceAll(/<\/?b>/gi, "");
+}
+
+const printArticleUrl = function(pdf, fontSize, fontType, label, url) {
+	lineHeight = setFont(pdf, fontSize, fontType);
+
+	if (newPageIfNeeded(pdf, lineHeight)) {
+		setFont(pdf, fontSize, fontType);
+	}
+	_pageY += lineHeight;
+
+	pdf.text(_viewLeft, _pageY, label);
+	var options = {};
+	options.url = url;
+	pdf.setTextColor(0, 0, 255);
+	pdf.textWithLink(url, _viewLeft + 50, _pageY, options);
+	pdf.setTextColor(0, 0, 0);
 }
 
 const newPageIfNeeded = function(pdf, heightNeeded) {
@@ -388,14 +547,24 @@ const newPageIfNeeded = function(pdf, heightNeeded) {
 }
 
 const afterFillNewsPageWithNewsContent = function(pdf) {
-	console.log("afterFillNewsPageWithNewsContent: " + _currentArticle + ", _pageY = " + _pageY);
-
-	_currentArticle++;
-
-	setTimeout(function () {readCurrentArticleLine(pdf);}, 1000);
+	console.log("afterFillNewsPageWithNewsContent: " + _currentArticle + " on page '" + getCurrentPageName() + "', _pageY = " + _pageY);
+	if (_currentPageName != getCurrentPageName()) {
+		console.log("currentPage: " + getCurrentPageName() + " is not the expected page " + _currentPageName);
+		if (Number(getCurrentPageName()) < Number(_currentPageName)) {
+			clickNextPage();
+		} else {
+			clickPrevPage();
+		}
+		setTimeout(function () {afterFillNewsPageWithNewsContent(pdf);}, 1000);
+	} else {
+		console.log("currentPage: " + getCurrentPageName() + " is the expected page " + _currentPageName);
+		_currentArticle++;
+		setTimeout(function () {readCurrentArticleLine(pdf);}, 1000);
+	}
 }
 
 const continueAfterInvalidArticle = function(pdf) {
+	console.log("continueAfterInvalidArticle " + _currentArticle + " on page '" + getCurrentPageName() + "'");
 	_currentArticle++;
 	setTimeout(function () {readCurrentArticleLine(pdf);}, 250);
 }
